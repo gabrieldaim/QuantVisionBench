@@ -64,7 +64,18 @@ project/
 
 ## VisDrone
 
-O projeto utiliza o dataset VisDrone2019 DET, composto por imagens capturadas por drones contendo objetos como:
+Este projeto utiliza o **VisDrone2019-DET**, um benchmark de detecção de objetos em imagens capturadas por drones, contendo classes como pedestres, carros, vans, caminhões, ônibus, bicicletas e motocicletas.
+
+### Task 1: Object Detection in Images
+
+#### VisDrone-DET Dataset
+
+| Conjunto | Tamanho | Download |
+|-----------|----------|----------|
+| Train Set | 1.44 GB | [BaiduYun](https://pan.baidu.com/s/1K-JtLnlHw98UuBDrYJvw3A) \| [Google Drive](https://drive.google.com/file/d/1a2oHjcEcwXP8oUF95qiwrqzACb2YlUhn/view?usp=sharing) |
+| Validation Set | 0.07 GB | [BaiduYun](https://pan.baidu.com/s/1jdK_dAxRJeF2Xi50IoML1g) \| [Google Drive](https://drive.google.com/file/d/1bxK5zgLn0_L8x276eKkuYA_FzwCIjb59/view?usp=sharing) |
+
+composto por imagens capturadas por drones contendo objetos como:
 
 | Classe | Descrição       |
 | ------ | --------------- |
