@@ -358,7 +358,6 @@ Onde:
 * Avaliação sob Gaussian Blur.
 * Avaliação sob compressão JPEG.
 * Avaliação sob baixa resolução.
-* Comparação YOLO26n vs YOLO26s.
 * Comparação FP32 vs INT8.
 * Avaliação em dispositivos Edge.
 
