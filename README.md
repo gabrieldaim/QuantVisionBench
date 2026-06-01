@@ -74,7 +74,7 @@ Este projeto utiliza o **VisDrone2019-DET**, um benchmark de detecção de objet
 |-----------|----------|----------|
 | Train Set | 1.44 GB | [BaiduYun](https://pan.baidu.com/s/1K-JtLnlHw98UuBDrYJvw3A) \| [Google Drive](https://drive.google.com/file/d/1a2oHjcEcwXP8oUF95qiwrqzACb2YlUhn/view?usp=sharing) |
 | Validation Set | 0.07 GB | [BaiduYun](https://pan.baidu.com/s/1jdK_dAxRJeF2Xi50IoML1g) \| [Google Drive](https://drive.google.com/file/d/1bxK5zgLn0_L8x276eKkuYA_FzwCIjb59/view?usp=sharing) |
-| testset-dev (0.28 GB): [BaiduYun](https://pan.baidu.com/s/1RdRfSWV-1IFK7aWljLU_LQ) | [GoogleDrive](https://drive.google.com/open?id=1PFdW_VFSCfZ_sTSZAGjQdifF_Xd5mf0V) (GT avalialbe) |
+| testset-dev | (0.28 GB) | [BaiduYun](https://pan.baidu.com/s/1RdRfSWV-1IFK7aWljLU_LQ) \| [GoogleDrive](https://drive.google.com/open?id=1PFdW_VFSCfZ_sTSZAGjQdifF_Xd5mf0V) (GT avalialbe) |
 
 
 composto por imagens capturadas por drones contendo objetos como:
