@@ -818,24 +818,271 @@ Após gerar os datasets degradados, o mesmo modelo treinado no dataset original 
 
 A comparação esperada seguirá o formato:
 
-| Dataset                 | Precision | Recall | mAP50 | mAP50-95 | Queda mAP50 |
-| ----------------------- | --------: | -----: | ----: | -------: | ----------: |
-| Original                |         - |      - |     - |        - |           - |
-| Motion Blur Light       |         - |      - |     - |        - |           - |
-| Motion Blur Medium      |         - |      - |     - |        - |           - |
-| Motion Blur Heavy       |         - |      - |     - |        - |           - |
-| Gaussian Blur Light     |         - |      - |     - |        - |           - |
-| Gaussian Blur Medium    |         - |      - |     - |        - |           - |
-| Gaussian Blur Heavy     |         - |      - |     - |        - |           - |
-| JPEG Compression Light  |         - |      - |     - |        - |           - |
-| JPEG Compression Medium |         - |      - |     - |        - |           - |
-| JPEG Compression Heavy  |         - |      - |     - |        - |           - |
-| Low Light Light         |         - |      - |     - |        - |           - |
-| Low Light Medium        |         - |      - |     - |        - |           - |
-| Low Light Heavy         |         - |      - |     - |        - |           - |
-| Combined Light          |         - |      - |     - |        - |           - |
-| Combined Medium         |         - |      - |     - |        - |           - |
-| Combined Heavy          |         - |      - |     - |        - |           - |
+| Dataset                 | Precision | Recall | mAP50 | mAP50-95 | Queda mAP50-95 (%) | FPS | Latência média (ms) |
+| ----------------------- | --------: | -----: | ----: | -------: | -----------------: | --: | ------------------: |
+| Original                |         - |      - |     - |        - |                  - |   - |                   - |
+| Motion Blur Light       |         - |      - |     - |        - |                  - |   - |                   - |
+| Motion Blur Medium      |         - |      - |     - |        - |                  - |   - |                   - |
+| Motion Blur Heavy       |         - |      - |     - |        - |                  - |   - |                   - |
+| Gaussian Blur Light     |         - |      - |     - |        - |                  - |   - |                   - |
+| Gaussian Blur Medium    |         - |      - |     - |        - |                  - |   - |                   - |
+| Gaussian Blur Heavy     |         - |      - |     - |        - |                  - |   - |                   - |
+| JPEG Compression Light  |         - |      - |     - |        - |                  - |   - |                   - |
+| JPEG Compression Medium |         - |      - |     - |        - |                  - |   - |                   - |
+| JPEG Compression Heavy  |         - |      - |     - |        - |                  - |   - |                   - |
+| Low Light Light         |         - |      - |     - |        - |                  - |   - |                   - |
+| Low Light Medium        |         - |      - |     - |        - |                  - |   - |                   - |
+| Low Light Heavy         |         - |      - |     - |        - |                  - |   - |                   - |
+| Combined Light          |         - |      - |     - |        - |                  - |   - |                   - |
+| Combined Medium         |         - |      - |     - |        - |                  - |   - |                   - |
+| Combined Heavy          |         - |      - |     - |        - |                  - |   - |                   - |
 
 Essa avaliação permitirá identificar quais tipos de degradação causam maior impacto no desempenho do modelo e em quais condições o modelo deixa de ser confiável.
+
+---
+
+# Estratégia de Validação Experimental
+
+Após a geração dos datasets degradados, o projeto realiza uma etapa de validação comparativa entre diferentes cenários de execução. O objetivo é avaliar não apenas a robustez do modelo diante das degradações visuais, mas também o impacto do ambiente computacional e da quantização INT8 sobre acurácia e desempenho.
+
+A validação considera quatro cenários principais:
+
+| Cenário  | Modelo        | Ambiente         | Objetivo                                   |
+| -------- | ------------- | ---------------- | ------------------------------------------ |
+| GPU FP32 | PyTorch FP32  | Execução com GPU | Baseline acelerada em GPU                  |
+| GPU INT8 | TensorRT INT8 | Execução com GPU | Avaliar impacto da quantização INT8 em GPU |
+| CPU FP32 | PyTorch FP32  | Execução sem GPU | Baseline em ambiente restrito              |
+| CPU INT8 | OpenVINO INT8 | Execução sem GPU | Avaliar ganho da quantização INT8 em CPU   |
+
+Essa divisão permite analisar separadamente:
+
+* a perda de acurácia causada pelas degradações visuais;
+* a diferença de desempenho entre GPU e CPU;
+* o impacto da quantização INT8;
+* o equilíbrio entre acurácia e velocidade de inferência.
+
+---
+
+## Execuções Repetidas
+
+Cada cenário de validação é executado múltiplas vezes para reduzir o impacto de variações pontuais do ambiente de execução.
+
+Neste projeto, cada combinação de modelo, ambiente e dataset é validada **3 vezes**.
+
+Exemplo:
+
+```text
+GPU FP32 + Original → 3 execuções
+GPU FP32 + Motion Blur Light → 3 execuções
+GPU FP32 + Motion Blur Medium → 3 execuções
+...
+CPU INT8 + Combined Heavy → 3 execuções
+```
+
+A partir dessas execuções, são calculados valores médios e desvios padrão para as principais métricas.
+
+---
+
+## Métricas Coletadas
+
+Durante a validação, são coletadas métricas de acurácia e desempenho.
+
+### Métricas de Detecção
+
+| Métrica   | Descrição                                                                |
+| --------- | ------------------------------------------------------------------------ |
+| Precision | Proporção de detecções corretas entre todas as detecções realizadas      |
+| Recall    | Proporção de objetos reais corretamente detectados                       |
+| mAP50     | Média da precisão considerando IoU de 0.50                               |
+| mAP50-95  | Média da precisão considerando múltiplos limiares de IoU, de 0.50 a 0.95 |
+
+### Métricas de Desempenho
+
+| Métrica          | Descrição                                                            |
+| ---------------- | -------------------------------------------------------------------- |
+| Preprocess Time  | Tempo médio de pré-processamento por imagem                          |
+| Inference Time   | Tempo médio de inferência por imagem                                 |
+| Postprocess Time | Tempo médio de pós-processamento por imagem                          |
+| Total Time       | Soma dos tempos de pré-processamento, inferência e pós-processamento |
+| FPS              | Quantidade estimada de imagens processadas por segundo               |
+| Elapsed Time     | Tempo total da execução de validação                                 |
+
+Além disso, são registradas informações do ambiente, como:
+
+* versão do Python;
+* versão do PyTorch;
+* disponibilidade de CUDA;
+* nome da GPU utilizada;
+* dispositivo solicitado na execução.
+
+---
+
+## Cálculo de Queda de Desempenho
+
+Para medir o impacto das degradações visuais, cada resultado degradado é comparado com o resultado obtido no dataset original dentro do mesmo cenário.
+
+A queda percentual de mAP50 é calculada como:
+
+```text
+queda_mAP50_% = ((mAP50_original - mAP50_degradado) / mAP50_original) * 100
+```
+
+A queda percentual de mAP50-95 segue a mesma lógica:
+
+```text
+queda_mAP50-95_% = ((mAP50-95_original - mAP50-95_degradado) / mAP50-95_original) * 100
+```
+
+Dessa forma, é possível identificar quais degradações causam maior impacto na acurácia do modelo.
+
+---
+
+## Cálculo de Speedup
+
+Para comparar o ganho de desempenho entre os cenários, o projeto utiliza o cenário **CPU FP32** como referência.
+
+O speedup é calculado como:
+
+```text
+speedup = FPS_cenario / FPS_CPU_FP32
+```
+
+Com isso, é possível observar quanto uma configuração é mais rápida ou mais lenta em relação à execução em CPU sem quantização.
+
+Exemplo:
+
+```text
+speedup = 2.0
+```
+
+significa que o cenário avaliado foi aproximadamente duas vezes mais rápido que o CPU FP32.
+
+---
+
+## Organização dos Resultados
+
+Os resultados são armazenados no Google Drive para evitar perda de dados ao encerrar o ambiente do Google Colab.
+
+Estrutura utilizada:
+
+```text
+aircraft_benchmark_results/
+│
+├── reports/
+│   │
+│   ├── gpu_fp32/
+│   │   ├── raw/
+│   │   │   └── raw_results.csv
+│   │   ├── summary/
+│   │   │   ├── summary_results.csv
+│   │   │   └── summary_results.xlsx
+│   │   ├── plots/
+│   │   └── ultralytics_val_runs/
+│   │
+│   ├── gpu_int8/
+│   │   ├── raw/
+│   │   ├── summary/
+│   │   ├── plots/
+│   │   └── ultralytics_val_runs/
+│   │
+│   ├── cpu_fp32/
+│   │   ├── raw/
+│   │   ├── summary/
+│   │   ├── plots/
+│   │   └── ultralytics_val_runs/
+│   │
+│   ├── cpu_int8/
+│   │   ├── raw/
+│   │   ├── summary/
+│   │   ├── plots/
+│   │   └── ultralytics_val_runs/
+│   │
+│   └── _comparative_4_scenarios/
+│       ├── tables/
+│       ├── plots/
+│       └── comparative_report_4_scenarios.xlsx
+```
+
+---
+
+## Arquivos Gerados
+
+Para cada cenário, são gerados arquivos de resultados brutos e consolidados.
+
+### Resultados Brutos
+
+```text
+raw_results.csv
+```
+
+Contém uma linha para cada execução individual.
+
+Exemplo:
+
+```text
+GPU FP32 + Original + Run 1
+GPU FP32 + Original + Run 2
+GPU FP32 + Original + Run 3
+GPU FP32 + Motion Blur Light + Run 1
+...
+```
+
+### Resultados Consolidados
+
+```text
+summary_results.csv
+summary_results.xlsx
+```
+
+Contêm as médias, desvios padrão, valores mínimos e máximos das métricas coletadas.
+
+### Relatório Comparativo Final
+
+```text
+comparative_report_4_scenarios.xlsx
+```
+
+Consolida os quatro cenários em uma única planilha, permitindo comparação direta entre:
+
+* GPU FP32;
+* GPU INT8;
+* CPU FP32;
+* CPU INT8.
+
+---
+
+## Gráficos Gerados
+
+O projeto gera gráficos comparativos para auxiliar a análise dos resultados.
+
+Entre os principais gráficos estão:
+
+| Gráfico                                  | Objetivo                                                  |
+| ---------------------------------------- | --------------------------------------------------------- |
+| mAP50-95 por cenário no dataset original | Comparar acurácia base entre FP32 e INT8                  |
+| FPS por cenário no dataset original      | Comparar desempenho computacional                         |
+| Latência por cenário                     | Avaliar custo de inferência por imagem                    |
+| Trade-off FPS × mAP50-95                 | Analisar equilíbrio entre velocidade e acurácia           |
+| Queda de mAP50-95 no nível pesado        | Identificar degradações mais prejudiciais                 |
+| mAP50-95 por nível de degradação         | Observar a queda progressiva por intensidade              |
+| Heatmap de queda de mAP50-95             | Visualizar rapidamente os impactos por degradação e nível |
+| Speedup em relação ao CPU FP32           | Medir ganho de desempenho relativo                        |
+
+Esses gráficos auxiliam na interpretação dos resultados e na identificação dos cenários mais eficientes.
+
+---
+
+## Interpretação Esperada
+
+A análise final busca responder às seguintes perguntas:
+
+* Qual degradação visual mais prejudica o modelo?
+* O impacto da degradação é progressivo entre os níveis leve, médio e pesado?
+* A quantização INT8 reduz significativamente a acurácia?
+* O ganho de desempenho do INT8 compensa eventual perda de precisão?
+* O modelo quantizado é mais adequado para execução em ambiente restrito?
+* Qual cenário apresenta melhor equilíbrio entre mAP50-95 e FPS?
+
+Essa etapa permite avaliar o comportamento do modelo sob uma perspectiva mais próxima de aplicações reais, considerando tanto a qualidade visual das imagens quanto as restrições computacionais do ambiente de execução.
+
 
