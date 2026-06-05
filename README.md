@@ -561,21 +561,281 @@ As principais métricas avaliadas são:
 
 ---
 
-# Status Atual
+# Degradação Controlada do Dataset
 
-Nesta versão inicial do projeto, o pipeline contempla:
+Após o treinamento inicial do modelo YOLO26n em FP32 sobre o dataset original, este projeto prevê a criação de versões degradadas do conjunto de validação e teste. O objetivo é avaliar a robustez do modelo diante de diferentes condições de perda de qualidade visual.
 
-* download do dataset Aircraft Detection Model v14 via Roboflow;
-* armazenamento do dataset no Google Drive;
-* cópia do dataset para `/content` no Google Colab;
-* treinamento do YOLO26n em FP32;
-* salvamento dos pesos no Google Drive;
-* retomada de treino interrompido com `last.pt`.
+A degradação controlada do dataset permite medir como o desempenho do modelo varia quando as imagens apresentam problemas comuns em cenários reais, como borrão de movimento, perda de foco, compressão de imagem e baixa iluminação.
 
-As próximas etapas do projeto incluirão:
+Importante: as degradações são aplicadas apenas sobre as imagens dos conjuntos de validação e teste. As anotações, isto é, os arquivos de labels com as bounding boxes, são mantidas inalteradas, pois as transformações utilizadas não modificam a posição espacial dos objetos nas imagens.
 
-* deterioração controlada do dataset;
-* avaliação do modelo em imagens degradadas;
-* exportação e quantização INT8;
-* comparação entre modelo FP32 e INT8;
-* análise dos resultados.
+---
+
+## Objetivo da Degradação
+
+A etapa de degradação tem como objetivo responder perguntas como:
+
+* O modelo mantém boa acurácia quando as imagens perdem nitidez?
+* Qual tipo de degradação mais prejudica a detecção de aeronaves?
+* O modelo é mais sensível a borrão, compressão, baixa iluminação ou perda de foco?
+* Como o desempenho varia conforme a degradação se intensifica?
+* O modelo continua viável em cenários de baixa qualidade visual?
+
+Essa análise é importante porque, em aplicações reais, imagens podem ser capturadas em condições imperfeitas, especialmente em vídeos, câmeras de vigilância, transmissões comprimidas ou dispositivos com recursos limitados.
+
+---
+
+## Estratégia Experimental
+
+A estratégia adotada consiste em treinar o modelo apenas uma vez no dataset original e, posteriormente, validá-lo em diferentes versões degradadas do dataset.
+
+A lógica experimental é:
+
+```text
+Treino:
+dataset original
+
+Validação/Teste:
+dataset original
+dataset com Motion Blur
+dataset com Gaussian Blur
+dataset com JPEG Compression
+dataset com Low Light
+dataset com degradações combinadas
+```
+
+Dessa forma, é possível comparar diretamente a queda de desempenho entre o cenário original e os cenários degradados.
+
+---
+
+## Grupos de Degradação
+
+As degradações foram organizadas em cinco grupos principais:
+
+| Grupo            | Tipo                 | Objetivo                                                     |
+| ---------------- | -------------------- | ------------------------------------------------------------ |
+| Original         | Sem degradação       | Baseline de comparação                                       |
+| Motion Blur      | Borrão de movimento  | Simular movimento da aeronave ou instabilidade da câmera     |
+| Gaussian Blur    | Desfoque gaussiano   | Simular perda de foco e redução de nitidez                   |
+| JPEG Compression | Compressão JPEG      | Simular perda de qualidade por compressão de imagem ou vídeo |
+| Low Light        | Baixa iluminação     | Simular imagens escuras ou com baixa visibilidade            |
+| Combined         | Degradação combinada | Simular um cenário realista com múltiplos problemas visuais  |
+
+---
+
+## Níveis de Degradação
+
+Cada tipo de degradação é aplicado em três níveis:
+
+| Nível  | Descrição         |
+| ------ | ----------------- |
+| Light  | Degradação leve   |
+| Medium | Degradação média  |
+| Heavy  | Degradação pesada |
+
+A divisão em níveis permite observar a progressão da perda de desempenho conforme a qualidade visual das imagens piora.
+
+Exemplo:
+
+```text
+motion_blur/light
+motion_blur/medium
+motion_blur/heavy
+```
+
+Essa organização permite avaliar não apenas se uma degradação afeta o modelo, mas também o quanto ela afeta conforme sua intensidade aumenta.
+
+---
+
+## Tipos de Degradação
+
+### Motion Blur
+
+O Motion Blur simula borrão de movimento. Esse tipo de degradação é relevante para detecção de aeronaves, pois imagens reais podem ser capturadas com a aeronave em alta velocidade, com a câmera em movimento ou a partir de vídeos com instabilidade.
+
+Parâmetros sugeridos:
+
+| Nível  | Kernel |
+| ------ | -----: |
+| Light  |      5 |
+| Medium |     11 |
+| Heavy  |     21 |
+
+---
+
+### Gaussian Blur
+
+O Gaussian Blur simula perda de foco ou redução geral de nitidez da imagem. Ele é útil para medir a sensibilidade do modelo a imagens desfocadas ou com baixa definição.
+
+Parâmetros sugeridos:
+
+| Nível  | Kernel |
+| ------ | -----: |
+| Light  |      3 |
+| Medium |      7 |
+| Heavy  |     11 |
+
+---
+
+### JPEG Compression
+
+A compressão JPEG simula perda de qualidade causada por compactação de imagem. Esse tipo de degradação é comum em vídeos, câmeras IP, transmissões com baixa largura de banda e imagens compartilhadas em sistemas web.
+
+Parâmetros sugeridos:
+
+| Nível  | Qualidade JPEG |
+| ------ | -------------: |
+| Light  |             70 |
+| Medium |             40 |
+| Heavy  |             20 |
+
+Quanto menor o valor de qualidade, maior a compressão e maior a perda visual.
+
+---
+
+### Low Light
+
+O Low Light reduz o brilho das imagens, simulando cenários de baixa iluminação, sombra, exposição inadequada ou perda de visibilidade.
+
+Parâmetros sugeridos:
+
+| Nível  | Fator de brilho |
+| ------ | --------------: |
+| Light  |            0.80 |
+| Medium |            0.60 |
+| Heavy  |            0.40 |
+
+Quanto menor o fator, mais escura fica a imagem.
+
+---
+
+### Combined
+
+O grupo Combined aplica múltiplas degradações na mesma imagem. Esse cenário é mais próximo de situações reais, nas quais a imagem pode estar simultaneamente escura, borrada, desfocada e comprimida.
+
+Degradações aplicadas:
+
+```text
+Low Light + Motion Blur + Gaussian Blur + JPEG Compression
+```
+
+Parâmetros sugeridos:
+
+| Nível  | Motion Blur | Gaussian Blur | JPEG Quality | Brilho |
+| ------ | ----------: | ------------: | -----------: | -----: |
+| Light  |           5 |             3 |           70 |   0.80 |
+| Medium |          11 |             7 |           40 |   0.60 |
+| Heavy  |          21 |            11 |           20 |   0.40 |
+
+---
+
+## Estrutura de Pastas
+
+Os datasets degradados são organizados separadamente para manter clareza durante as validações.
+
+Estrutura proposta:
+
+```text
+aircraft_benchmark/
+│
+├── original/
+│   └── data.yaml
+│
+└── degraded/
+    │
+    ├── motion_blur/
+    │   ├── light/
+    │   ├── medium/
+    │   └── heavy/
+    │
+    ├── gaussian_blur/
+    │   ├── light/
+    │   ├── medium/
+    │   └── heavy/
+    │
+    ├── jpeg_compression/
+    │   ├── light/
+    │   ├── medium/
+    │   └── heavy/
+    │
+    ├── low_light/
+    │   ├── light/
+    │   ├── medium/
+    │   └── heavy/
+    │
+    └── combined/
+        ├── light/
+        ├── medium/
+        └── heavy/
+```
+
+Cada cenário degradado possui sua própria estrutura de validação e teste:
+
+```text
+degraded/motion_blur/light/
+├── valid/
+│   ├── images/
+│   └── labels/
+│
+├── test/
+│   ├── images/
+│   └── labels/
+│
+└── data.yaml
+```
+
+---
+
+## Preservação dos Labels
+
+As degradações aplicadas neste projeto não alteram a geometria principal dos objetos na imagem. Por isso, os arquivos de anotação no formato YOLO são reutilizados sem modificação.
+
+Ou seja, para cada imagem degradada, o label correspondente continua sendo o mesmo da imagem original.
+
+Exemplo:
+
+```text
+Imagem original:
+valid/images/exemplo.jpg
+
+Label original:
+valid/labels/exemplo.txt
+
+Imagem degradada:
+degraded/motion_blur/light/valid/images/exemplo.jpg
+
+Label reutilizado:
+degraded/motion_blur/light/valid/labels/exemplo.txt
+```
+
+Essa estratégia permite comparar os resultados de forma justa, pois o conteúdo semântico e as bounding boxes permanecem os mesmos, enquanto apenas a qualidade visual da imagem é alterada.
+
+---
+
+## Comparação Esperada
+
+Após gerar os datasets degradados, o mesmo modelo treinado no dataset original será validado em cada cenário.
+
+A comparação esperada seguirá o formato:
+
+| Dataset                 | Precision | Recall | mAP50 | mAP50-95 | Queda mAP50 |
+| ----------------------- | --------: | -----: | ----: | -------: | ----------: |
+| Original                |         - |      - |     - |        - |           - |
+| Motion Blur Light       |         - |      - |     - |        - |           - |
+| Motion Blur Medium      |         - |      - |     - |        - |           - |
+| Motion Blur Heavy       |         - |      - |     - |        - |           - |
+| Gaussian Blur Light     |         - |      - |     - |        - |           - |
+| Gaussian Blur Medium    |         - |      - |     - |        - |           - |
+| Gaussian Blur Heavy     |         - |      - |     - |        - |           - |
+| JPEG Compression Light  |         - |      - |     - |        - |           - |
+| JPEG Compression Medium |         - |      - |     - |        - |           - |
+| JPEG Compression Heavy  |         - |      - |     - |        - |           - |
+| Low Light Light         |         - |      - |     - |        - |           - |
+| Low Light Medium        |         - |      - |     - |        - |           - |
+| Low Light Heavy         |         - |      - |     - |        - |           - |
+| Combined Light          |         - |      - |     - |        - |           - |
+| Combined Medium         |         - |      - |     - |        - |           - |
+| Combined Heavy          |         - |      - |     - |        - |           - |
+
+Essa avaliação permitirá identificar quais tipos de degradação causam maior impacto no desempenho do modelo e em quais condições o modelo deixa de ser confiável.
+
