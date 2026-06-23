@@ -1,0 +1,51 @@
+description: Ultralytics YOLO26n model trained on /content/Aircraft-Detection-Model-14/data.yaml
+author: Ultralytics
+date: '2026-06-18T21:32:51.311137'
+version: 8.4.71
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: A220
+  1: A300
+  2: A320 family
+  3: A330
+  4: A340
+  5: A350
+  6: A380
+  7: B737
+  8: B747
+  9: B757
+  10: B767 family
+  11: B777
+  12: B787
+  13: Beechcraft Bonanza series
+  14: Bombardier CRJ series
+  15: Bombardier Challenger series
+  16: C-17
+  17: Cessna 680
+  18: Cessna high-wing
+  19: Dassault Falcon 7X
+  20: E175
+  21: F-35
+  22: F-5
+  23: KC-135
+  24: Learjet series
+  25: MD-11
+  26: Piper PA-28 series
+  27: UH-60 family
+args:
+  data: /content/aircraft_benchmark/original/data.yaml
+  batch: 1
+  fraction: 1.0
+  half: false
+  int8: true
+  dynamic: false
+  nms: false
+channels: 3
+end2end: true
